@@ -1,0 +1,23 @@
+*.o
+*.ko
+*.cmd
+casfs.mod*
+*.mod
+*.mod.c
+.tmp_versions/
+modules.order
+Module.symvers
+version.h
+git-version
+.vscode
+ctrl/tap/test/a.out
+ctrl/tap/test/out.json
+api/cmd/casfsapi
+api/tests/apicoverage.out
+api/tests/tests.test
+
+# Editor backups and temporary files
+*~
+.*~
+#*#
+.#*

@@ -1,0 +1,26 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2025 Google LLC
+
+# We run checkpatch.pl on all commits to be pushed.
+
+while read local_ref local_sha remote_ref remote_sha; do
+  # Gerrit complicates this because of the refs/for naming.
+  # We need to update the remote ref and sha for commit set operations.
+  actual_remote_ref="$remote_ref"
+  actual_remote_sha="$remote_sha"
+  if [[ $remote_ref == refs/for/* ]] && [[ $remote_sha == 0000000000000000000000000000000000000000 ]]; then
+    remote_name="$1" # git push origin...
+    actual_remote_ref=$(echo "$remote_ref" | sed -E 's/refs\/for\/(refs\/heads\/)?//')
+    actual_remote_sha=$(git rev-parse "$remote_name/$actual_remote_ref")
+  fi
+
+  # Run .c and .h files across all commits to be pushed through
+  # third_party/linux/scripts/checkpatch.pl
+  if ! git diff ${local_sha} ^${actual_remote_sha} -- '*.c' '*.h' | ./third_party/linux/scripts/checkpatch.pl -; then
+    echo ""
+    echo ""
+    echo "pre-push: checkpatch.pl reported failures"
+    exit 1
+  fi
+done

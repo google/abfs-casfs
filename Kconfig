@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2023 Google LLC
+
+config CASFS_FS
+    tristate "Content-Addressable Storage File-System (CASFS)"
+    depends on INET
+    help
+      If you say Y here, you will get an experimental Content-Addressable Storage File-System driver.
+
+      If unsure, say N.

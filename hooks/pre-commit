@@ -1,0 +1,30 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2025 Google LLC
+
+# We run clang-format on all files present in the commit.
+
+# We only care about C files.
+FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(c|h)$')
+
+# Nothing to do.
+if [[ -z "$FILES" ]]; then
+  exit 0
+fi
+
+for FILE in $FILES; do
+  # Nothing to format.
+  if [[ -z $(clang-format -i "$FILE" --dry-run |& head -c 1) ]]; then
+    continue
+  fi
+
+  if ! clang-format -i "$FILE"; then
+    echo ""
+    echo ""
+    echo "pre_commit: could not format ${FILE}"
+    exit 1
+  fi
+  echo "Formatted: $FILE"
+
+  git add "$FILE"
+done

@@ -1,0 +1,11 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2023 Google LLC
+ */
+
+#ifndef _VERSION_H_
+#define _VERSION_H_
+
+#define CASFS_VERSION "$VERSION"
+
+#endif /*_VERSION_H_*/
