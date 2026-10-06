@@ -21,3 +21,4 @@ api/tests/tests.test
 .*~
 #*#
 .#*
+/out/

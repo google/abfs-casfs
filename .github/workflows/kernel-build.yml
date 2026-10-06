@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: GPL-2.0
+# Copyright (C) 2026 Google LLC
+#
+# Builds casfs.ko against each kernel listed in ci/kernels.txt, using
+# ci/build-kernels.sh. Run that script locally to reproduce a failure.
+
+name: kernel-build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, to catch breakage from new kernel releases.
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kernels:
+    name: List kernels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      kernels: ${{ steps.list.outputs.kernels }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: list
+        run: |
+          kernels=$(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' \
+            ci/kernels.txt | jq -Rnc '[inputs]')
+          echo "kernels=$kernels" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Linux ${{ matrix.kernel }}
+    needs: kernels
+    runs-on: ubuntu-24.04
+    # The mainline header packages are built with Ubuntu's GCC 15, so build
+    # with the same compiler.
+    container: ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        kernel: ${{ fromJSON(needs.kernels.outputs.kernels) }}
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl gcc git libelf-dev make
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build
+        env:
+          KERNEL: ${{ matrix.kernel }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          ci/build-kernels.sh -W -- "$KERNEL"
