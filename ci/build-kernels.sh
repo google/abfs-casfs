@@ -218,7 +218,18 @@ build_one() {
 		fi
 		echo "headers: $kdir"
 		copy_sources "$dir/src"
-		make -C "$kdir" M="$dir/src" -j"$jobs" modules
+		# Ubuntu's header packages pin CC to the compiler they were built
+		# with (e.g. "gcc-13"). Use $CC, or plain gcc if that isn't installed.
+		cc_args=()
+		want=$(sed -nE 's/^CC[[:space:]]*=[[:space:]]*\$\(CROSS_COMPILE\)//p' \
+			"$kdir/Makefile" | head -1)
+		if [[ -n ${CC:-} ]]; then
+			cc_args=(CC="$CC" HOSTCC="${HOSTCC:-$CC}")
+		elif [[ -n $want ]] && ! command -v "$want" >/dev/null; then
+			echo "note: $want is not installed, using gcc"
+			cc_args=(CC=gcc HOSTCC=gcc)
+		fi
+		make -C "$kdir" M="$dir/src" -j"$jobs" "${cc_args[@]}" modules
 	) >"$dir/build.log" 2>&1
 	rc=$?
 	set -e
