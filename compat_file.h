@@ -41,7 +41,8 @@ static inline struct file *cas_backing_file_open(const struct path *user_path,
 						 const struct path *real_path,
 						 const struct cred *cred)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0) || \
+	defined(CASFS_BACKING_FILE_OPEN_USER_FILE)
 	(void)user_path;
 	return backing_file_open(user_file, flags, real_path, cred);
 #else

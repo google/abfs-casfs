@@ -22,6 +22,16 @@ ccflags-y     := -std=gnu11 -Wall -Wframe-larger-than=1024 \
                  -Wno-missing-declarations -Wno-missing-prototypes \
                  $(call cc-option,-Xassembler --gsframe=no)
 
+# Some distribution kernels (e.g. Debian 13's 6.12.y and Ubuntu 26.04's
+# 7.0.0-*-gcp) backport the Linux 7.1 backing_file_open() signature that takes
+# the user file instead of the user path, so detect it from the kernel headers
+# rather than relying only on LINUX_VERSION_CODE. $(srctree) is only set when
+# invoked through Kbuild.
+ifneq ($(srctree),)
+ccflags-y += $(shell grep -qsE 'backing_file_open.const struct file [*]' \
+               $(srctree)/include/linux/backing-file.h && echo -DCASFS_BACKING_FILE_OPEN_USER_FILE)
+endif
+
 obj-m := casfs.o
 
 OBJECT_FILES_NON_STANDARD_casfs.o := y
