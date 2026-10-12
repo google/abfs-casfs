@@ -67,7 +67,8 @@ git_objs  :=	$(addprefix ctrl/git/, \
 casfs-y := $(root_objs) $(ctrl_objs) $(tap_objs) $(git_objs)
 
 .PHONY: all ko reload checkpatch-diff checkpatch-head checkpatch-all \
-        version api apitests install install-hooks clean
+        version api apitests install install-hooks clean \
+        dkms-install dkms-uninstall
 
 all: install-hooks ko api apitests
 
@@ -94,6 +95,14 @@ reload: ko
 install: ko
 	mkdir -p $(DESTDIR)/lib/modules/$(KERNEL_RELEASE)/kernel/fs/casfs
 	cp casfs.ko $(DESTDIR)/lib/modules/$(KERNEL_RELEASE)/kernel/fs/casfs
+
+# Install the module with DKMS so it is rebuilt for new kernels and loaded at
+# boot. Run as a normal user; the script uses sudo where needed.
+dkms-install: version.h
+	./scripts/dkms.sh install $(CASFS_VERSION)
+
+dkms-uninstall:
+	./scripts/dkms.sh uninstall
 
 apitests:
 	go test -C api/tests -c

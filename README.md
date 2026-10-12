@@ -61,6 +61,33 @@ from `hooks/`.
 The module version comes from `git describe`, or from the `VERSION` file
 when no release tag is available.
 
+### Installing with DKMS
+
+A module loaded with `insmod` is not loaded again after a reboot, and it
+stops loading once the kernel is updated (`disagrees about version of
+symbol ...`). To avoid both, install it with
+[DKMS](https://github.com/dkms-project/dkms), which rebuilds it whenever a new
+kernel and its headers are installed:
+
+```shell
+sudo apt-get install --no-install-recommends dkms   # Debian/Ubuntu
+make dkms-install
+```
+
+Run `make dkms-install` as your normal user; it uses `sudo` where needed.
+It copies the sources to `/usr/src/casfs-<version>`, replaces any other
+casfs version registered with DKMS, builds and installs the module for every
+kernel with headers installed, loads it if no casfs file system is mounted,
+and adds `/etc/modules-load.d/casfs.conf` so that it is loaded at boot.
+`sudo modprobe casfs` and `sudo modprobe -r casfs` then work as for any
+other module. Re-run it after updating the sources. `make dkms-uninstall`
+removes it again.
+
+To get the module for future kernels, keep the headers for them installed,
+for example with the headers metapackage that matches your kernel
+metapackage (`linux-headers-gcp` for `linux-image-gcp`,
+`linux-headers-cloud-amd64` for `linux-image-cloud-amd64`, and so on).
+
 ## Quick start
 
 ```shell
