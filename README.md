@@ -2,46 +2,71 @@ CASFS - Content-Addressable Storage File-System
 ===
 
 CASFS is a Linux file system in which files and directories are identified by
-the hash of their content, using the Git object model (SHA-1). Trees are
+the hash of their content, using the Git object model (SHA-1). Everything is
 loaded lazily: a directory or file is materialized from its hash only when it
 is accessed, and missing objects are fetched on demand from a user-space cache
 daemon over a Unix domain socket. CASFS also provides "tapping", which records
 the file-system activity of a process group, for precise build dependency
 tracking.
 
-CASFS is the file-system layer of ABFS (Another Build File Service).
+CASFS is the file-system layer of [ABFS (Another Build File Service)](https://github.com/google/abfs).
 
 > [!NOTE]
 > This is not an officially supported Google product.
 
-## License
+## Compatibility
 
-This repository contains code under two licenses.
+We have an upcoming release planned that will fix many compatibility issues for a wider range of kernels. For the current initial release, we have this AI-scripted analysis of compatibility:
 
-* The Linux kernel module and everything else outside `api/` (the C
-  sources, `Kconfig`, `Makefile`, `ctrl/`, build scripts and tests) are
-  licensed under the GNU General Public License, version 2 only (SPDX
-  `GPL-2.0`); see [LICENSE](LICENSE).
-* `ctrl/inode.c` is adapted from the Linux kernel's `fs/ramfs/inode.c`
-  (Copyright (C) 2000 Linus Torvalds, 2000 Transmeta Corp.) and keeps its
-  upstream notice.
-* The Go user-space API and CLI under [`api/`](api/) are licensed under the
-  Apache License, Version 2.0; see [api/LICENSE](api/LICENSE).
+### Kernel compatibility
 
-Code under `third_party/` comes from other projects; see the `LICENSE`
-and `METADATA` files in each of its directories. The
-`SPDX-License-Identifier` or license header in each file is authoritative.
+CASFS is built out of tree against the headers of the target kernel. The
+results below come from compile-and-link checks on x86_64 against the
+[Ubuntu mainline kernel](https://kernel.ubuntu.com/mainline/) header packages
+(the newest point release of each series as of October 2026). The module was
+not loaded or tested on these kernels; a successful build is not a guarantee
+of runtime correctness.
 
-## Repository layout
+Builds successfully:
 
-| Path | Contents |
-| :--- | :--- |
-| `*.c`, `*.h`, `Kconfig`, `Makefile` | The `casfs` kernel module. |
-| `ctrl/` | Control interface (tapping, Git object virtualization). |
-| `api/` | Go library and `casfsapi` CLI for the extended-attribute API, plus Go tests. |
-| `docs/` | Design notes for the cache, file and provider subsystems. |
-| `tests/` | Shell test runners (require root and a loaded module). |
-| `third_party/linux/` | `checkpatch.pl` and its data files, and `.clang-format`, from the Linux kernel (see its `METADATA`). |
+- 5.15 (5.15.223)
+- 6.1 (6.1.190)
+- 6.8 (6.8.12)
+- 6.9 (6.9.12)
+- 6.10 (6.10.14)
+- 6.11 (6.11.11)
+- 6.12 (6.12.50, 6.12.113)
+- 6.13 (6.13.12)
+- 6.15 (6.15.11)
+- 6.16 (6.16.12)
+- 6.17 (6.17.12)
+- 6.18 (6.18.57)
+- 7.0 (7.0.1, 7.0.14)
+- 7.1 (7.1.13)
+- 7.2 (7.2.6)
+
+Distribution kernels that have also been built and used with ABFS:
+
+- Debian 13: 6.12.107+deb13-cloud-amd64
+- Ubuntu 26.04 on Google Compute Engine: 7.0.0-1011-gcp, 7.0.0-1014-gcp
+
+Known build failures:
+
+- 5.10 and older: `vfs_unlink()` signature mismatch in `cache.c`.
+- 6.6 (6.6.159): uses `inode->i_ctime`, which was replaced by the ctime
+  accessors in 6.6.
+- 6.7 (6.7.10): `<linux/backing-file.h>` is missing (it first appeared in
+  6.8).
+- 6.14 (6.14.11): `d_revalidate` signature mismatch in `dir.c`.
+- 6.19 (6.19.14): `vfs_mkdir()` / `vfs_rmdir()` signature mismatch in
+  `compat_dir.h`.
+- 7.3-rc3: `create` inode operation signature mismatch in `dir.c`.
+
+Not yet tested: 6.2 through 6.5.
+
+## Use with ABFS
+
+Most people should see the [ABFS documentation](https://github.com/google/abfs) for using CASFS within the context of ABFS instead of this documentation directly.
 
 ## Building
 
@@ -93,6 +118,7 @@ tree /mnt/casfs/chroot/.ctrl/
 └── tap
 
 ```
+
 #### Tap
 The tap control interface allows a process to record all file-system activity associated with a
 program session.  This is accomplished by opening a temporary file off the tap control directory,
@@ -127,10 +153,28 @@ For a complete example, see the `casfsapi tap` command in
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). New files must carry the license
-header that matches their location (see [License](#license) above). Kernel C code
+header that matches their location (see [License](#license) below). Kernel C code
 follows the Linux kernel coding style: `make install-hooks` installs git
 hooks that run `clang-format` and `third_party/linux/scripts/checkpatch.pl`.
 Go code must be `gofmt`-clean and pass `go vet`.
+
+## License
+
+This repository contains code under two licenses.
+
+* The Linux kernel module and everything else outside `api/` (the C
+  sources, `Kconfig`, `Makefile`, `ctrl/`, build scripts and tests) are
+  licensed under the GNU General Public License, version 2 only (SPDX
+  `GPL-2.0`); see [LICENSE](LICENSE).
+* `ctrl/inode.c` is adapted from the Linux kernel's `fs/ramfs/inode.c`
+  (Copyright (C) 2000 Linus Torvalds, 2000 Transmeta Corp.) and keeps its
+  upstream notice.
+* The Go user-space API and CLI under [`api/`](api/) are licensed under the
+  Apache License, Version 2.0; see [api/LICENSE](api/LICENSE).
+
+Code under `third_party/` comes from other projects; see the `LICENSE`
+and `METADATA` files in each of its directories. The
+`SPDX-License-Identifier` or license header in each file is authoritative.
 
 ## Security
 
